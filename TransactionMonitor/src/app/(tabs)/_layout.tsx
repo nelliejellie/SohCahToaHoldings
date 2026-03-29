@@ -7,7 +7,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FF8C00',
+        tabBarActiveTintColor: '#CF5A18',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
@@ -39,7 +39,7 @@ export default function TabLayout() {
           title: '',
           tabBarIcon: () => (
             <View style={styles.exchangeButton}>
-              <Ionicons name="swap-horizontal" size={28} color="#FF8C00" />
+              <Ionicons name="swap-horizontal" size={28} color="#CF5A18" />
             </View>
           ),
         }}
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    shadowColor: '#FF8C00',
+    shadowColor: '#CF5A18',
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF8C00',
+    backgroundColor: '#CF5A18',
     borderWidth: 1,
     borderColor: '#FFFFFF',
   }

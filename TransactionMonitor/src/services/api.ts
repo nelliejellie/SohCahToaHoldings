@@ -132,5 +132,15 @@ export const MockAPI = {
       return ALL_TRANSACTIONS[index];
     }
     throw new Error('Transaction not found');
+  },
+
+  // Developer tool to synchronize randomly generated UI stream events with the "backend" memory
+  injectMockEvent: (tx: Transaction) => {
+    const index = ALL_TRANSACTIONS.findIndex(t => t.id === tx.id);
+    if (index > -1) {
+      ALL_TRANSACTIONS[index] = { ...ALL_TRANSACTIONS[index], ...tx };
+    } else {
+      ALL_TRANSACTIONS.unshift(tx);
+    }
   }
 };

@@ -2,55 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MockAPI, Transaction } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { useTransactionStore } from '../../store/transactionStore';
 
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
 
-  const [tx, setTx] = useState<Transaction | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Read implicitly linked states through global memory preventing excessive physical fetches (UI Layer extraction)
+  const tx = useTransactionStore(state => state.transactions.find(t => t.id === id));
+  const updateTransactionOptimistic = useTransactionStore(state => state.updateTransactionOptimistic);
 
-  const [noteInput, setNoteInput] = useState('');
+  const [noteInput, setNoteInput] = useState(tx?.notes || '');
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    loadTransaction();
-  }, [id]);
-
-  const loadTransaction = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await MockAPI.getTransaction(id as string);
-      setTx(data);
-      setNoteInput(data.notes || '');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (tx && noteInput === '') {
+       setNoteInput(tx.notes || '');
     }
-  };
+  }, [tx]);
 
   const handleToggleFlag = async () => {
     if (!tx || !isAdmin || isUpdating) return;
 
-    // OPTIMISTIC UPDATE: Update strictly locally immediately
-    const previousState = { ...tx };
-    const optimisticState = { ...tx, isFlagged: !tx.isFlagged };
-    setTx(optimisticState);
-
     try {
       setIsUpdating(true);
-      await MockAPI.updateTransaction(tx.id, { isFlagged: optimisticState.isFlagged });
+      // The store natively handles the Optimistic Extraction & Error Rollback computationally mapping Business Logic securely
+      await updateTransactionOptimistic(tx.id, { isFlagged: !tx.isFlagged });
     } catch (err: any) {
-      // ROLLBACK on network failure
-      setTx(previousState);
-      Alert.alert('Update Failed', 'Network simulated error. Local state rolled back.');
+      Alert.alert('Update Failed', 'Network simulated error. Local state rolled back reliably.');
     } finally {
       setIsUpdating(false);
     }
@@ -59,36 +42,22 @@ export default function TransactionDetailScreen() {
   const handleSaveNote = async () => {
     if (!tx || !isAdmin || noteInput === tx.notes || isUpdating) return;
 
-    // OPTIMISTIC UPDATE
-    const previousState = { ...tx };
-    const optimisticState = { ...tx, notes: noteInput };
-    setTx(optimisticState);
-
     try {
       setIsUpdating(true);
-      await MockAPI.updateTransaction(tx.id, { notes: noteInput });
+      await updateTransactionOptimistic(tx.id, { notes: noteInput });
     } catch (err: any) {
-      // ROLLBACK 
-      setTx(previousState);
-      setNoteInput(previousState.notes || '');
-      Alert.alert('Update Failed', 'Network simulated error. Local state rolled back.');
+      Alert.alert('Update Failed', 'Network simulated error. Local state rolled back reliably.');
+      setNoteInput(tx.notes || ''); // Revert decoupled input state structurally
     } finally {
       setIsUpdating(false);
     }
   };
 
-  if (loading) {
+  if (!tx) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#FF8C00" />
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !tx) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Not found'}</Text>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Text style={styles.errorText}>Transaction securely missing globally.</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -99,7 +68,7 @@ export default function TransactionDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      {/* Header */}
+      {/* Structural Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -109,7 +78,7 @@ export default function TransactionDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Core Metadata */}
+        {/* Memory Parsed Metadata block */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Metadata</Text>
           <View style={styles.row}>
@@ -130,7 +99,6 @@ export default function TransactionDetailScreen() {
           </View>
         </View>
 
-        {/* Security Context: Device & IP */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Security Context</Text>
           <View style={styles.row}>
@@ -149,7 +117,7 @@ export default function TransactionDetailScreen() {
           )}
         </View>
 
-        {/* Admin Explicit Actions */}
+        {/* Roles Logic Integration */}
         {isAdmin && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Admin Actions</Text>
@@ -208,7 +176,7 @@ const styles = StyleSheet.create({
   flagButtonText: { marginLeft: 8, color: '#FF3B30', fontWeight: 'bold', fontSize: 14 },
   labelNote: { fontSize: 14, color: '#111', fontWeight: 'bold', marginBottom: 8 },
   textInput: { backgroundColor: '#F5F5F7', borderRadius: 12, padding: 16, fontSize: 14, color: '#333', minHeight: 100, textAlignVertical: 'top' },
-  saveButton: { backgroundColor: '#FF8C00', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
+  saveButton: { backgroundColor: '#CF5A18', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   saveButtonDisabled: { backgroundColor: '#FFD199' },
   saveButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   errorText: { color: '#FF3B30', marginBottom: 16 },

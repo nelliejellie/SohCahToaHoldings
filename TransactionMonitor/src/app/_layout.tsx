@@ -20,7 +20,7 @@ export default function RootLayout() {
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/login');
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/');
+      router.replace('/(tabs)' as any);
     }
   }, [isAuthenticated, isLoading, segments, router]);
 
@@ -35,7 +35,7 @@ export default function RootLayout() {
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="index" options={{ title: 'Transactions', headerStyle: { backgroundColor: '#FF8C00' }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }
